@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: App.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: App.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import "@/App.css";
+import { useState, useRef } from "react";
+
+import HomeScreen from "@/model/main-screens/HomeScreen";
+import NewRoomScreen from "@/model/main-screens/NewRoomScreen";
+import LoadRoomScreen from "@/model/main-screens/LoadRoomScreen";
+
+// States that the home page can be in
+import HOME_STATES from "@/model/main-screens/States.jsx"
+
+// 'RoomScreen.jsx' used for page 2 room logic under the primary if-statement
+import RoomScreen from "@/model/room/RoomScreen.jsx";
+
+import { saveImage } from "@/db/db.js";
+
+
+/**
+ * A container for all the necessary React components and useStates in the app.
+ * @returns HTML for a file explorer input and the currently rendered appScreen
+ */
+function App() {
+  const [activeRoom, setActiveRoom] = useState(null);
+  const [homeState, setHomeState] = useState(HOME_STATES.MAIN);
+
+  const imageInputRef = useRef(null);
+  const imageCallbackRef = useRef(null);
+
+  function openImagePicker(callback) {
+    imageCallbackRef.current = callback;
+    imageInputRef.current.click();
+  }
+
+  async function handleImageSelected(event) {
+    const file = event.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    const imageId = await saveImage(file);
+    const imageSrc = URL.createObjectURL(file);
+
+    if (imageCallbackRef.current !== null) {
+      imageCallbackRef.current({
+        file,
+        imageId,
+        imageSrc,
+      });
+    }
+
+    imageCallbackRef.current = null;
+    event.target.value = "";
+  }
+
+  /** 
+   * Sets state back to MAIN and renders a RoomScreen based on the name.
+   * @param {string} roomData - Name of the Room, passed to setActiveRoom().
+  */
+  function handleNewRoomClick(name, imgSrc) {
+    setHomeState(HOME_STATES.MAIN);
+    setActiveRoom({ id: null, name, imgSrc: imgSrc, ideas: [], type: "New" });
+  }
+
+  // NOTE: Unsure what type is used for, but new room logic is adjusted to always have "New" information.
+  // function handleTemplateRoomClick(name, imgSrc) {
+  //   setHomeState(HOME_STATES.MAIN);
+  //   setActiveRoom({ id: null, name, imgSrc: imgSrc, ideas: [], type: "Template" });
+  // }
+
+  function handleLoadRoomClick(data) {
+    setHomeState(HOME_STATES.MAIN);
+    setActiveRoom(data)
+  }
+
+  /**
+   * Calls setHomeState() to render certain screen components.
+   * @param {number} button - state from STATES.
+   */
+  function handleHomeMainClick(button) {
+    setHomeState(button);
+  }
+
+
+  function handleGoTo(screen) {
+    setActiveRoom(null);
+    setHomeState(screen);
+  }
+
+  function updateActiveRoom(changes) {
+    setActiveRoom((loadedRoom) => {
+      if (loadedRoom === null) {
+        return null;
+      }
+      return { ...loadedRoom, ...changes };
+    })
+
+
+    // TODO: Update in DB
+  }
+
+  let appScreen;
+
+  //IMPORTANT!
+  //here we check if the activeRoom has a real value
+  //if so, it displays a new screen with a sentence containing the value - this is a placeholder for page 2
+  //Here is where the core of our delegation will take place - we will need to call upon RoomScreen here and that's where the page 2 logic lies
+  if (activeRoom) {
+    appScreen = (
+      &lt;RoomScreen
+        roomData={activeRoom}
+        updateRoomData={updateActiveRoom}
+        onGoHome={() => handleGoTo(HOME_STATES.MAIN)}
+        openImagePicker={openImagePicker}
+        onGoLoad={() => handleGoTo(HOME_STATES.LOAD)}
+        onGoNew={() => handleGoTo(HOME_STATES.NEW)}
+      />
+    );
+    // Home screen navigation, contains all main screen components and renders them based on homeState.
+  } else {
+    appScreen = (
+      &lt;div className="home">
+        &lt;h1>Memory Palace&lt;/h1>
+        &lt;p>Pick a Background Room&lt;/p>
+
+        {/* Landing page, buttons to enable NewRoomScreen or LoadRoomScreen components */}
+        &lt;HomeScreen
+          isOpen={homeState}
+          openLoad={() => handleHomeMainClick(HOME_STATES.LOAD)}
+          openNew={() => handleHomeMainClick(HOME_STATES.NEW)} />
+
+        {/* Create a new room */}
+        &lt;NewRoomScreen
+          isOpen={homeState}
+          onClose={handleNewRoomClick}
+          onGoHome={() => handleHomeMainClick(HOME_STATES.MAIN)}
+          openImagePicker={openImagePicker} />
+
+        {/* Load previously made rooms */}
+        &lt;LoadRoomScreen
+          isOpen={homeState}
+          onClose={() => handleHomeMainClick(HOME_STATES.MAIN)}
+          onCloseLoad={handleLoadRoomClick} />
+      &lt;/div>
+    );
+  }
+
+  return (
+    &lt;>
+      &lt;input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleImageSelected}
+      />
+
+      {appScreen}
+    &lt;/>
+  );
+
+}
+
+export default App;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#App">App</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Jul 23 2026 16:57:44 GMT-0500 (Central Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
